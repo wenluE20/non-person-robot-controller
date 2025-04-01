@@ -1,0 +1,4 @@
+<launch>
+ <node pkg="my_robot" type="robot_moving" name="robot_moving"/>
+ <node pkg="my_robot" type="robot_camera" name="robot_camera"/>
+</launch>
