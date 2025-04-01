@@ -1,0 +1,35 @@
+<launch>
+ <!-- 启动雷达 -->
+ <node name="ydlidar_node" pkg="ydlidar_ros_driver" 
+type="ydlidar_ros_driver_node" output="screen">
+ <param name="port" type="string" value="/dev/port2"/> 
+ <param name="baudrate" type="int" value="230400"/>
+ <param name="frame_id" type="string" value="laser_frame"/>
+ <param name="angle_fixed" type="bool" value="true"/>
+ <param name="low_exposure" type="bool" value="false"/>
+ <param name="heartbeat" type="bool" value="false"/>
+ <param name="resolution_fixed" type="bool" value="true"/>
+ <param name="angle_min" type="double" value="-90" />
+ <param name="angle_max" type="double" value="90" />
+ <param name="range_min" type="double" value="0.08" />
+ <param name="range_max" type="double" value="16.0" />
+ <param name="ignore_array" type="string" value="" />
+ <param name="samp_rate" type="int" value="4"/>
+ <param name="frequency" type="double" value="7"/>
+ </node>
+ <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser4"
+ args="0.2245 0.0 0.28 0.0 0.0 0.0 base_footprint laser_frame 40" />
+ <!-- 处理雷达数据 -->
+ <node pkg="detect_lidar" name="detect_lidar" type="detect_lidar" 
+output="screen">
+ <!-- 聚类图像大小 -->
+ <param name="Map_Size" value="800" />
+ <!-- 进行聚类处理的角度范围 -->
+ <param name="Kmeans_Angle_Min" value="-120" />
+ <param name="Kmeans_Angle_Max" value="120" />
+ <!-- 坐标换算时，坐标膨胀的比例-->
+ <param name="Proportion_XY" value="0.5" />
+ <!-- Kmeans 循环次数 -->
+ <param name="Loop_Times" value="5" />
+ </node>
+</launch>
