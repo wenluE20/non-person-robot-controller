@@ -1,0 +1,160 @@
+#include "ros/ros.h"
+#include "std_msgs/String.h"
+#include "geometry_msgs/Twist.h"
+#include "detect_lidar/LidarDetect.h"
+#include <cmath>
+
+class RobotController
+{
+public:
+    RobotController()
+    {
+        // Initialize NodeHandle
+        ros::NodeHandle nh;
+        
+        // Load parameters
+        distance_threshold = nh.param("/robot_controller/distance_threshold", 0.5);
+        linear_speed = nh.param("/robot_controller/linear_speed", 0.2);
+        angular_speed = nh.param("/robot_controller/angular_speed", 0.3);
+        
+        // Subscribe to cones topic from detect_lidar
+        cones_sub = nh.subscribe("cones", 10, &RobotController::conesCallback, this);
+        
+        // Publisher for robot velocity commands
+        vel_pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
+        
+        // Initialize state
+        current_state = MOVING_FORWARD;
+        rotation_start_time = ros::Time(0);
+        current_rotation_angle = 0.0;
+    }
+    
+    void run()
+    {
+        ros::Rate loop_rate(10); // 10 Hz
+        
+        while (ros::ok())
+        {
+            updateRobotMotion();
+            ros::spinOnce();
+            loop_rate.sleep();
+        }
+    }
+    
+private:
+    enum RobotState {
+        MOVING_FORWARD,
+        ROTATING_AROUND_CONE
+    };
+    
+    ros::Subscriber cones_sub;
+    ros::Publisher vel_pub;
+    geometry_msgs::Twist cmd_vel;
+    
+    RobotState current_state;
+    float distance_to_closest_cone;
+    float closest_cone_x;
+    float closest_cone_y;
+    float distance_threshold;
+    float linear_speed;
+    float angular_speed;
+    ros::Time rotation_start_time;
+    float current_rotation_angle;
+    
+    void conesCallback(const detect_lidar::LidarDetect::ConstPtr& msg)
+    {
+        // Find the closest cone
+        float min_distance = std::numeric_limits<float>::max();
+        float closest_x = 0.0;
+        float closest_y = 0.0;
+        
+        // Iterate through detected cones
+        for (int i = 0; i < 8; i++)
+        {
+            // Check if this is a valid cone (non-zero coordinates)
+            if (std::fabs(msg->x[i]) > 0.001 || std::fabs(msg->y[i]) > 0.001)
+            {
+                // Calculate distance to this cone
+                float distance = std::sqrt(std::pow(msg->x[i], 2) + std::pow(msg->y[i], 2));
+                
+                // Update if this cone is closer
+                if (distance < min_distance)
+                {
+                    min_distance = distance;
+                    closest_x = msg->x[i];
+                    closest_y = msg->y[i];
+                }
+            }
+        }
+        
+        // Update closest cone information
+        distance_to_closest_cone = min_distance;
+        closest_cone_x = closest_x;
+        closest_cone_y = closest_y;
+        
+        ROS_INFO("Closest cone at (%0.2f, %0.2f), distance: %0.2f", 
+                 closest_cone_x, closest_cone_y, distance_to_closest_cone);
+    }
+    
+    void updateRobotMotion()
+    {
+        switch (current_state)
+        {
+            case MOVING_FORWARD:
+                // Move forward
+                cmd_vel.linear.x = linear_speed;
+                cmd_vel.angular.z = 0.0;
+                
+                // Check if we need to start rotating around a cone
+                if (distance_to_closest_cone < distance_threshold && distance_to_closest_cone > 0.01)
+                {
+                    ROS_INFO("Cone detected within threshold! Starting rotation.");
+                    current_state = ROTATING_AROUND_CONE;
+                    rotation_start_time = ros::Time::now();
+                    current_rotation_angle = 0.0;
+                    
+                    // First, stop moving forward
+                    cmd_vel.linear.x = 0.0;
+                }
+                break;
+                
+            case ROTATING_AROUND_CONE:
+                // Calculate how much we've rotated so far
+                float time_elapsed = (ros::Time::now() - rotation_start_time).toSec();
+                current_rotation_angle += angular_speed * 0.1; // Approximation for each update cycle
+                
+                // Rotate around the cone - use a slightly more complex motion to orbit the cone
+                // Calculate vector to cone
+                float angle_to_cone = std::atan2(closest_cone_y, closest_cone_x);
+                
+                // Move perpendicular to the cone direction
+                float orbit_angle = angle_to_cone + M_PI/2;
+                
+                // Set velocities to orbit the cone
+                cmd_vel.linear.x = linear_speed * 0.5; // Reduce linear speed during orbiting
+                cmd_vel.angular.z = angular_speed;
+                
+                // Check if we've completed one full rotation (360 degrees = 2π radians)
+                if (current_rotation_angle >= 2 * M_PI)
+                {
+                    ROS_INFO("Completed full rotation around cone!");
+                    current_state = MOVING_FORWARD;
+                    cmd_vel.angular.z = 0.0;
+                }
+                break;
+        }
+        
+        // Publish velocity command
+        vel_pub.publish(cmd_vel);
+    }
+};
+
+int main(int argc, char **argv)
+{
+    ros::init(argc, argv, "robot_controller");
+    
+    RobotController controller;
+    controller.run();
+    
+    return 0;
+}
