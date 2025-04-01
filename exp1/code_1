@@ -1,0 +1,22 @@
+#include "ros/ros.h"
+#include "geometry_msgs/Twist.h"
+ros::Publisher vel_pub;
+int main(int argc, char ** argv)
+{
+ ros::init(argc, argv, "robot_moving");
+ ros::NodeHandle n;
+ ros::Subscriber camera_sub;
+ vel_pub = n.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+ ros::Rate loop_rate(10); // 设置循环频率为 10Hz
+ geometry_msgs::Twist vel_msg;
+ while (ros::ok())
+ {
+ // 发布消息，让小车绕一小半径旋转
+ vel_msg.linear.x = 0.05;
+ vel_msg.linear.y = 0.;
+ vel_msg.angular.z = 0.5;
+ vel_pub.publish(vel_msg);
+ ros::spinOnce(); // 处理回调函数
+ loop_rate.sleep(); // 控制循环速率
+ }
+}
