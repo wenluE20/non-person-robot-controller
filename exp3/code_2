@@ -1,0 +1,22 @@
+void sendCmd() 
+{
+ ros::Rate loop_rate(10);//发布消息频率，1 秒 10 次
+ 
+  while (1) 
+ {
+ if( ) { //自行添加，给出一个判断，启动机器人运动
+ twist.linear.x = 0;//线速度
+ twist.linear.y = 0;
+ twist.linear.z = 0;
+ twist.angular.x = 0;
+ twist.angular.y = 0;
+ twist.angular.z = 0.4;//角速度
+ 
+   ROS_WARN("*****cmd");//调试使用，打印输出
+ 
+   cmd_pub.publish(twist); //发布消息
+ }
+ 
+   loop_rate.sleep(); //根据频率进行睡眠
+ }
+}
