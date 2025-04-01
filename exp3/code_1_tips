@@ -1,0 +1,34 @@
+最简单的方法是将新控制器文件添加到与现有节点相同的包中。
+这样就无需创建新工作区并简化了依赖关系。detect_lidar
+
+**实施步骤：**
+
+# 导航到包目录：
+bashCopycd ~/dashgo_ws/src/detect_lidar
+
+# 创建新的 C++ 文件：
+bashCopytouch src/robot_controller.cpp
+
+将代码添加到新文件robot_controller.cpp
+
+修改CMakeLists.txt：
+# 打开包的 CMakeLists.txt 并添加：
+cmakeCopyadd_executable(robot_controller src/robot_controller.cpp)
+target_link_libraries(robot_controller ${catkin_LIBRARIES})
+add_dependencies(robot_controller ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# 构建包：
+bashCopycd ~/dashgo_ws
+catkin_make
+
+**启动顺序：**
+
+# 启动机器人底座：
+bashCopyroslaunch dashgo_driver dashgo_driver.launch
+
+# 使用 detect_lidar 启动 LiDAR：
+bashCopyroslaunch detect_lidar detect_lidar.launch
+
+# 运行控制器：
+bashCopyrosrun detect_lidar robot_controller
+
