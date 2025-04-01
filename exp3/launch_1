@@ -1,0 +1,36 @@
+<launch>
+ <!-- 启动雷达 -->
+ <node pkg="ltme01_driver" type="ltme01_driver_node" 
+name="ltme01_driver_node" output="screen">
+ <!-- Device node for LTME-01 -->
+ <param name="device" value="/dev/ltme01"/>
+ <!-- 雷达坐标系名称 -->
+ <param name="frame_id" value="laser_frame"/>
+ <!-- 雷达扫描的角度范围最大范围-2.356 到 2.356 -->
+ <param name="angle_min" value="-2.35"/>
+ <param name="angle_max" value="2.356"/>
+ <!-- 雷达扫描的半径最大范围 0.2m 到 30m -->
+ <param name="range_min" value="0.2"/>
+ <param name="range_max" value="30"/>
+ </node>
+ <!-- TF 树 雷达与底盘坐标关系 -->
+ <node pkg="tf" type="static_transform_publisher" 
+name="base_link_to_laser4"
+ args="0.25 0.0 0.28 -0.08 0.0 0.0 /base_footprint /laser_frame 40" />
+ 
+<!-- 处理雷达数据 -->
+ <node pkg="detect_lidar" name="detect_lidar" type="detect_lidar" 
+output="screen">
+ 
+ <!-- 聚类图像大小 -->
+ <param name="Map_Size" value="800" />
+ <!-- 进行聚类处理的角度范围 -->
+ <param name="Kmeans_Angle_Min" value="-120" />
+ <param name="Kmeans_Angle_Max" value="120" />
+ <!-- 坐标换算时，坐标膨胀的比例-->
+ <param name="Proportion_XY" value="0.5" />
+ <!-- Kmeans 循环次数 -->
+ <param name="Loop_Times" value="5" />
+ </node>
+</launch>
+
